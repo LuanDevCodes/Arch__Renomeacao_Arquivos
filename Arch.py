@@ -6,7 +6,6 @@ import json # Precisa dela para a geração dos arquivos JSON que serão o log d
 import re # Vem de Regex, é especialista em padões, não procura palavras em si. É muito importante para capturar datas e números
 from pypdf import PdfReader # Para trabalhar com os PDF's, descobri ao longo de testes que ela n é boa com tabelas
 from datetime import datetime # O datetime é necessário para situações aonde preciso da data e hora
-from pathlib import Path # Usada quando precisamos navegar por pastas de arquivos
 from dotenv import load_dotenv # Para carregar o arquivo .env, com ele eu consigo trancar tudo e deixar o repositório público :D
 
 # --------------------------------------------------------------------------------------------------------------------
