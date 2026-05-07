@@ -107,20 +107,21 @@ def extracao_pdf(texto_pdf):
     # 2 - CAPTURANDO A REGIÃO DO CONTRATO
     # -------------------------------------------------------------------------
 
-    # Antes eu estava realizando a captura por meio da frase "Pedido de compras", mas ela é uscetível a erros e quebras de texto
-    # por isso mudei a âncora para os números que vem depois, pois eles normalmente não são quebrados no texto, tornando a captura
-    # mais fácil e menos propensa a bugar e dar problemas 
+    # O pypdf pode quebrar linhas tanto no meio do número do pedido 
+    # quanto no nome da região, o Regex foi ajustado para ignorar essas quebras (experiência própria)
 
-    # \d{8,11}    -> ÂNCORA INICIAL: Procura uma sequência que tenha de 8 a 11 números 
-    # \s*-\s*     -> Procura o primeiro hífen. O \s* antes e depois permite que existam espaços vazios ou quebras de linha em volta
+    # (?:\d\s*){8,11} -> ÂNCORA INICIAL: O '\d\s*' procura um número permitindo que tenha espaço ou quebra de linha logo após ele 
+    #                    O '{8,11}' repete isso de 8 a 11 vezes, lê o pedido perfeitamente mesmo se estiver quebrado.
     
-    # (.+?)       -> O NOSSO ALVO: Os parênteses indicam o que queremos capturar (a região).
-    #                O "." significa "qualquer caractere".
-    #                O "+?" significa pare imediatamente assim que encontrar a próxima regra
-    # \s*-\s*Projeto -> ÂNCORA FINAL: Manda o robô parar a captura exatamente no hífen que antecede a palavra "Projeto"
+    # -\s*            -> LIGAÇÃO: Captura o primeiro hífen ignorando espaços ao redor
+    # ([\s\S]+?)      -> O ALVO: O '[\s\S]' é o coringa supremo que captura qualquer coisa, inclusive quebras de linha
+    #                    O '+?' garante a "captura preguiçosa", parando só quando ele chega na próxima regra
     
-    # foquei na estrutura: um número de 8 a 11 dígitos, um hífen, a região, um hífen, e a palavra Projeto
-    padrao_regiao = r"\d{8,11}\s*-\s*(.+?)\s*-\s*Projeto"
+    # \s*-\s*Projeto  -> ÂNCORA FINAL: Para a captura no hífen antes da palavra "Projeto"
+    
+    # foquei na estrutura: um número de 8 a 11 dígitos (mesmo que quebrado em várias linhas), 
+    # um hífen, a região (podendo ter quebra de linha), um hífen, e a palavra Projeto
+    padrao_regiao = r"(?:\d\s*){8,11}-\s*([\s\S]+?)\s*-\s*Projeto"
     busca_regiao = re.search(padrao_regiao, texto_pdf[1175:2400], re.IGNORECASE)
     
     if busca_regiao:
@@ -130,16 +131,16 @@ def extracao_pdf(texto_pdf):
         print(f"🟢  Região Identificada: {dados['regiao']}")
     else:
         dados["regiao"] = "Regiao_Nao_Encontrada"
-        print("⚠️  Região não encontrada")
+        print("⚠️   Região não encontrada")
         
     # -------------------------------------------------------------------------
     # 3 - CAPTURANDO A MEDIÇÃO
     # -------------------------------------------------------------------------
-    # 1. \"?        -> Procura uma aspa no começo, o '?' significa que ela é opcional (evita falhas se o pypdf acabar não lendo essa aspa)
-    # 2. Medicao N  -> Procura exatamente essa palavra
-    # 3. [º°]       -> o símbolo pode ser o ordinal (º) ou o de grau (°)
-    # 4. :\s*       -> Procura os dois pontos seguidos de qualquer quantidade de espaços em branco
-    # 5. (\d+)      -> captura apenas números (um ou mais), só aceita dígitos, ele vai parar assim que esbarrar numa string/vazio
+    # \"?        -> Procura uma aspa no começo, o '?' significa que ela é opcional (evita falhas se o pypdf acabar não lendo essa aspa)
+    # Medicao N  -> Procura exatamente essa palavra
+    # [º°]       -> o símbolo pode ser o ordinal (º) ou o de grau (°)
+    # :\s*       -> Procura os dois pontos seguidos de qualquer quantidade de espaços em branco
+    # (\d+)      -> captura apenas números (um ou mais), só aceita dígitos, ele vai parar assim que esbarrar numa string/vazio
     
     padrao_medicao = r"\"?Medicao\s+N[º°]?\s*:?\s*(\d+)"
     busca_medicao = re.search(padrao_medicao, texto_pdf[1175:2400], re.IGNORECASE) # Usa o mesmo corte que já pega a descrição
@@ -180,7 +181,7 @@ def main():
     
     # começando com uma verificação simples de pasta e arquivos antes de começar, iniciando pelo mais recente na pasta
     if not os.path.exists(pasta_pdf):
-        print(f"⚠️  Pasta de PDF não encontrada: {pasta_pdf}")
+        print(f"🗺️  Pasta de PDF não encontrada: {pasta_pdf}")
         return 
 
     # Pegando todos os arquivos .pdf da pasta
@@ -209,7 +210,7 @@ def main():
             if infos is None:
                 continue # O comando 'continue' interrompe a volta atual do loop e pula para o próximo arquivo da pasta
             
-            infos["arquivo_original"] = nome_arquivo
+            infos["arquivo"] = nome_arquivo
             
             # Definição do novo nome com base na solicitação
             novo_nome = f"nfe_{infos['numero_nota']}_-_{infos['regiao']}_-_{infos['medicao']}°_MEDIÇÃO.pdf"
@@ -220,13 +221,14 @@ def main():
                 # verificando se o nome novo já existe para não sobrescrever sem querer
                 if not os.path.exists(caminho_novo):
                     os.rename(caminho_antigo, caminho_novo)
-                    infos["arquivo_atualizado"] = novo_nome
+                    infos["nome_antigo_do_arquivo"] = nome_arquivo
+                    infos["nome_novo_do_arquivo"] = novo_nome
                     print(f"✅ Renomeado: {nome_arquivo} -> {novo_nome}")
                 else:
-                    print(f"⚠️  Arquivo {novo_nome} já existe - Pulando renomeação")
+                    print(f"👥  Arquivo {novo_nome} já existe - Pulando renomeação")
             except Exception as e:
                 print(f"❌ Erro ao renomear {nome_arquivo}: {e}")
-
+                
             dados_totais.append(infos)
 
     # Geração do Log JSON (Unificado)
