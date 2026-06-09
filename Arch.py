@@ -48,6 +48,16 @@ def extrair_texto_do_pdf(caminho_arquivo):
 def extracao_pdf(texto_pdf):
     
     print("\n🤺 Arch iniciando o processo de extração")
+    
+    # -------------------------------------------------------------------------
+    # BLOCO DE VISUALIZAÇÃO (Para análise de Regex e Debug)
+    # -------------------------------------------------------------------------
+    # print("\n" + "="*50)
+    # print("TEXTO COMPLETO CAPTURADO DO PDF:")
+    # print("-" * 50)
+    # print(texto_pdf[1100:1700])
+    # print("="*50 + "\n")
+    
     dados = {}
     
     # -------------------------------------------------------------------------
@@ -151,7 +161,42 @@ def extracao_pdf(texto_pdf):
         print(f"🟢  N° da Medição Identificada: {dados['medicao']}")
     else:
         dados["medicao"] = "Medicao_Nao_Encontrada"
-        print("⚠️  N° da Medição não encontrada")
+        print("⚠️   N° da Medição não encontrada")
+        
+        
+    # -------------------------------------------------------------------------
+    # 4 - CAPTURANDO o PROJETO
+    # -------------------------------------------------------------------------
+    # -\s*Projeto  -> ÂNCORA INICIAL: Procura o hífen seguido da palavra Projeto
+    # \s*          -> Pula qualquer espaço
+    # ([\d.]+)     -> O ALVO: Captura números e o ponto decimal (ex: 00000.00)
+    
+    padrao_projeto = r"-\s*Projeto\s*([\d.]+)"
+    busca_projeto = re.search(padrao_projeto, texto_pdf[1175:2400], re.IGNORECASE)
+    
+    if busca_projeto:
+        dados["projeto"] = busca_projeto.group(1).strip()
+        print(f"🟢  N° do Projeto Identificado: {dados['projeto']}")
+    else:
+        dados["projeto"] = "Projeto_Nao_Encontrado"
+        print("⚠️   N° do Projeto não encontrado")
+        
+    # -------------------------------------------------------------------------
+    # 5 - CAPTURANDO o PEDIDO
+    # -------------------------------------------------------------------------
+    # \"Pedido de compra:\" -> ÂNCORA INICIAL: Procura o texto exato entre aspas
+    # \s*                   -> Pula qualquer espaço
+    # (\d+)                 -> O ALVO: Captura apenas os números do pedido
+    
+    padrao_pedido = r"\"Pedido de compra:\"\s*(\d+)"
+    busca_pedido = re.search(padrao_pedido, texto_pdf[1175:2400], re.IGNORECASE)
+    
+    if busca_pedido:
+        dados["pedido"] = busca_pedido.group(1)
+        print(f"🟢  Pedido de Compra Identificado: {dados['pedido']}")
+    else:
+        dados["pedido"] = "Pedido_Nao_Encontrado"
+        print("⚠️   Pedido de Compra não encontrado")
         
     return dados
 
@@ -213,7 +258,7 @@ def main():
             infos["arquivo"] = nome_arquivo
             
             # Definição do novo nome com base na solicitação
-            novo_nome = f"nfe_{infos['numero_nota']}_-_{infos['regiao']}_-_{infos['medicao']}°_MEDIÇÃO.pdf"
+            novo_nome = f"nfe_{infos['numero_nota']}_-_{infos['regiao']}_-_{infos['medicao']}°_MEDIÇÃO_-_PROJETO_{infos['projeto']} °_-_PEDIDO_{infos['pedido']}.pdf"
             caminho_novo = os.path.join(pasta_pdf, novo_nome)
             
             # Renomeação Física do arquivo
