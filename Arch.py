@@ -46,16 +46,16 @@ def extrair_texto_do_pdf(caminho_arquivo):
 
 # Função responsável por realizar a extração das informações no modelo do PDF
 def extracao_pdf(texto_pdf):
-    
+
     print("\n🤺 Arch iniciando o processo de extração")
     
     # -------------------------------------------------------------------------
-    # BLOCO DE VISUALIZAÇÃO (Para análise de Regex e Debug)
+    # BLOCO DE VISUALIZAÇÃO (Para análise de Regex e Debugs
     # -------------------------------------------------------------------------
     # print("\n" + "="*50)
     # print("TEXTO COMPLETO CAPTURADO DO PDF:")
     # print("-" * 50)
-    # print(texto_pdf[1100:1700])
+    # print(texto_pdf[1100:2400])
     # print("="*50 + "\n")
     
     dados = {}
@@ -134,9 +134,15 @@ def extracao_pdf(texto_pdf):
     padrao_regiao = r"(?:\d\s*){8,11}-\s*([\s\S]+?)\s*-\s*Projeto"
     busca_regiao = re.search(padrao_regiao, texto_pdf[1175:2400], re.IGNORECASE)
     
+    if not busca_regiao:
+        # Fallback para casos sem a palavra "Projeto" como âncora final (experiência própria)
+        padrao_regiao_alt = r"Contrato\s+n\.[º°]?\s+\d+\s*-\s*([\s\S]+?)(?=\n| {2,}|\*)"
+        busca_regiao = re.search(padrao_regiao_alt, texto_pdf[1175:2400], re.IGNORECASE)
+
     if busca_regiao:
         # o raplace é para que caso alguma região venha com quebra de linha ou espaço, ela será limpa para ser usada sem erro
-        regiao_limpa = busca_regiao.group(1).replace("\n", " ").strip()
+        # O .upper() garante que o nome da região fique sempre em letras maiúsculas para padronização
+        regiao_limpa = busca_regiao.group(1).replace("\n", " ").strip().upper()
         dados["regiao"] = regiao_limpa
         print(f"🟢  Região Identificada: {dados['regiao']}")
     else:
@@ -147,12 +153,12 @@ def extracao_pdf(texto_pdf):
     # 3 - CAPTURANDO A MEDIÇÃO
     # -------------------------------------------------------------------------
     # \"?        -> Procura uma aspa no começo, o '?' significa que ela é opcional (evita falhas se o pypdf acabar não lendo essa aspa)
-    # Medicao N  -> Procura exatamente essa palavra
+    # Medicao N  -> Procura exatamente essa palavra (aceita Medicao ou Medição)
     # [º°]       -> o símbolo pode ser o ordinal (º) ou o de grau (°)
     # :\s*       -> Procura os dois pontos seguidos de qualquer quantidade de espaços em branco
     # (\d+)      -> captura apenas números (um ou mais), só aceita dígitos, ele vai parar assim que esbarrar numa string/vazio
     
-    padrao_medicao = r"\"?Medicao\s+N[º°]?\s*:?\s*(\d+)"
+    padrao_medicao = r"\"?Medi[cç][ãa]o\s+N[º°]?\s*:?\s*(\d+)"
     busca_medicao = re.search(padrao_medicao, texto_pdf[1175:2400], re.IGNORECASE) # Usa o mesmo corte que já pega a descrição
     
     if busca_medicao:
@@ -182,15 +188,19 @@ def extracao_pdf(texto_pdf):
         print("⚠️   N° do Projeto não encontrado")
         
     # -------------------------------------------------------------------------
-    # 5 - CAPTURANDO o PEDIDO
+    # 5 - CAPTURANDO o PEDIDO (Blindado contra quebras de linha)
     # -------------------------------------------------------------------------
-    # \"Pedido de compra:\" -> ÂNCORA INICIAL: Procura o texto exato entre aspas
-    # \s*                   -> Pula qualquer espaço
-    # (\d+)                 -> O ALVO: Captura apenas os números do pedido
+    # \s+ -> Aceita espaço ou quebra de linha entre as palavras
+    # s?  -> Aceita singular (compra) ou plural (compras)
     
-    padrao_pedido = r"\"Pedido de compra:\"\s*(\d+)"
+    padrao_pedido = r"\"Pedido\s+de\s+compras?:\s*\"\s*(\d+)"
     busca_pedido = re.search(padrao_pedido, texto_pdf[1175:2400], re.IGNORECASE)
     
+    if not busca_pedido:
+        # Fallback para quando vem apenas "Pedido: 000", tive que criar essa alternativa por erros de padronização
+        padrao_pedido_alt = r"Pedido:\s*(\d+)"
+        busca_pedido = re.search(padrao_pedido_alt, texto_pdf[1175:2400], re.IGNORECASE)
+
     if busca_pedido:
         dados["pedido"] = busca_pedido.group(1)
         print(f"🟢  Pedido de Compra Identificado: {dados['pedido']}")
@@ -258,7 +268,7 @@ def main():
             infos["arquivo"] = nome_arquivo
             
             # Definição do novo nome com base na solicitação
-            novo_nome = f"nfe_{infos['numero_nota']}_-_{infos['regiao']}_-_{infos['medicao']}°_MEDIÇÃO_-_PROJETO_{infos['projeto']} °_-_PEDIDO_{infos['pedido']}.pdf"
+            novo_nome = f"nfe_{infos['numero_nota']}_-_{infos['regiao']}_-_{infos['medicao']}°_MEDIÇÃO_-_PROJETO_{infos['projeto']}_-_PEDIDO_{infos['pedido']}.pdf"
             caminho_novo = os.path.join(pasta_pdf, novo_nome)
             
             # Renomeação Física do arquivo
