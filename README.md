@@ -33,7 +33,7 @@ Este projeto nasceu da necessidade de aplicar conceitos práticos de programaç�
 
 ## 🔐 Configuração das Variáveis de Ambiente (.env)
 
-Para que a Ema funcione corretamente no ambiente local ou no servidor, é necessário criar um arquivo chamado `.env` na raiz do projeto contendo as variáveis abaixo.
+Para que o Arch funcione corretamente no ambiente local ou no servidor, é necessário criar um arquivo chamado `.env` na raiz do projeto contendo as variáveis abaixo.
 
 > **Atenção:** Caso alguma de suas credenciais possua caracteres especiais utilizados para anotações no ecossistema Python (como o caractere `#`), é obrigatório envolver o valor em aspas duplas `" "` para garantir a interpretação correta pelo sistema
 
