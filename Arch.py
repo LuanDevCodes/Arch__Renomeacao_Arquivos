@@ -64,7 +64,7 @@ def extracao_pdf(texto_pdf):
     # CAPTURANDO E VALIDANDO A DATA DA NOTA (Filtro de Maio/2026), isso foi preciso pq as informações de medição e região
     # só foram adicionadas depois desse mês em específico
     # -------------------------------------------------------------------------
-    padrao_data = r"Data da emissão da NFS-e\s*(\d{2}/\d{2}/\d{4})"
+    padrao_data = r"DATA E HORA DA EMISSÃO DA NFS-E\s*(\d{2}/\d{2}/\d{4})"
     busca_data = re.search(padrao_data, texto_pdf[:400])
     
     if busca_data:
